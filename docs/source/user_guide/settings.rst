@@ -86,7 +86,7 @@ The following settings are available:
      - true
      - yes
    * - USE_PARALLEL_POLYNOMIAL_EVAL
-     - If True, use the experimental polynomial-parallel Triton evaluator. If False, use the original serial polynomial evaluator.
+     - If True, use the experimental polynomial-parallel Triton evaluator. If False, use the original sequential polynomial evaluator.
      - true, false
      - false
      - yes

@@ -1,6 +1,6 @@
 """Original Triton polynomial evaluator.
 
-This backend intentionally preserves the one-dimensional launch and serial
+This backend intentionally preserves the one-dimensional launch and sequential
 loop over polynomials used before the polynomial-parallel optimization.
 """
 
@@ -8,7 +8,7 @@ import triton
 import triton.language as tl
 
 
-def evaluate_polynomials(
+def evaluate_polynomials_sequential(
     x,
     coefs,
     terms,
@@ -21,11 +21,11 @@ def evaluate_polynomials(
     degree_rounded_up,
     dtype,
 ):
-    """Launch the original serial-over-polynomials kernel."""
+    """Launch the original sequential-over-polynomials kernel."""
     grid = lambda meta: (
         triton.cdiv(num_points, meta["NUM_POINTS_TO_LOAD"]),
     )
-    evaluate_polynomials_kernel[grid](
+    evaluate_polynomials_sequential_kernel[grid](
         x,
         coefs,
         terms,
@@ -67,7 +67,7 @@ def prod(x, y):
 
 @triton.autotune(configs=get_configs_polynomials(), key=["num_monomials"])
 @triton.jit
-def evaluate_polynomials_kernel(
+def evaluate_polynomials_sequential_kernel(
     input_ptr,
     coefs_ptr,
     terms_ptr,
@@ -82,7 +82,36 @@ def evaluate_polynomials_kernel(
     NUM_MONOMIALS_TO_LOAD: tl.constexpr,
     dtype: tl.constexpr = tl.float32,
 ):
-    """Evaluate every polynomial serially within each point-block program."""
+    """
+    Triton kernel that is used to simultaneously evaluate many multivariate polynomials on a batch of points.
+    Each program handles a block of points and loops over the polynomials sequentially.
+
+    :param input_ptr: Pointer to the array of input points.
+
+    :param coefs_ptr: Pointer to the array of coefficients of the monomials.
+
+    :param terms_ptr: Pointer to the array of terms. The number of columns MUST be a power of 2. Pad using -1 if necessary.
+
+    :param polynomial_sizes_ptr: Pointer to the array of polynomial sizes.
+
+    :param output_ptr: Pointer to the array that will store the output values. Each row corresponds to a different input point X_i. Each column corresponds to a different polynomial p_j.
+                       Thus, the ij entry of the output_ptr will be p_j(X_i).
+
+    :param num_monomials: The total number of monomials across all polynomials. This should equal len(coefs_ptr).
+
+    :param input_dimension_rounded_up: Let n represent the number of entries of each X_i (so for (1,2,3), n=3). Then input_dimension_rounded_up is the smallest power of 2 that is larger than n.
+
+    :param num_points: The number of points X_i, equal to the number of rows in the tensor pointed to by input_ptr.
+
+    :param degree_rounded_up: Let n represent the maximum degree of all of the polynomials. Then degree_rounded_up is the smallest power of 2 that is larger than n. This is also the number of 
+                        columns in the tensor pointed to by terms_ptr.
+
+    :param NUM_POINTS_TO_LOAD: hyperparameter. This specifies the number of points to evaluate monomials on at the same time.
+
+    :param NUM_MONOMIALS_TO_LOAD: hyperparameter. This specifies the number of monomials to evaluate at the same time.
+
+    :param dtype: Specifies whether the output will be float32 or float64.
+    """
     num_monomials_indexer = tl.arange(0, NUM_MONOMIALS_TO_LOAD)[None, :, None]
 
     x_pid = tl.program_id(0)

@@ -5,7 +5,7 @@ import triton
 import triton.language as tl
 
 from .. import settings
-from .poly_triton_serial import evaluate_polynomials as evaluate_polynomials_serial
+from .poly_triton_sequential import evaluate_polynomials_sequential
 
 """
 This module pertains to simultaneously evaluating many multivariate polynomials defined on common inputs.
@@ -272,9 +272,7 @@ class EvaluatePolynomials(torch.autograd.Function):
             kernel_dtype = tl.float32
 
         if settings.USE_PARALLEL_POLYNOMIAL_EVAL:
-            from .poly_triton_parallel import (
-                evaluate_polynomials as evaluate_polynomials_parallel,
-            )
+            from .poly_triton_parallel import evaluate_polynomials_parallel
 
             polynomial_offsets = polynomials.get_polynomial_offsets(derivative_level)
             evaluate_polynomials_parallel(
@@ -285,7 +283,7 @@ class EvaluatePolynomials(torch.autograd.Function):
                 dtype=kernel_dtype,
             )
         else:
-            evaluate_polynomials_serial(
+            evaluate_polynomials_sequential(
                 x, coefs, terms, polynomial_sizes, output,
                 num_polynomials, num_monomials, input_dimension_rounded_up,
                 num_points, degree_rounded_up, dtype=kernel_dtype,
