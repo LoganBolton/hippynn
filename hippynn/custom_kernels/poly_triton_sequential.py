@@ -42,6 +42,8 @@ def evaluate_polynomials_sequential(
 
 def get_configs_polynomials():
     """Return the configurations searched when autotuning the kernel."""
+    # I have arbitrarily chosen some safe, general autotune configs here. In the
+    # future you could tweak this to be better for more niche applications.
     # (NUM_POINTS_TO_LOAD, NUM_MONOMIALS_TO_LOAD, num_warps, num_stages)
     # Keep num_warps * 32 <= NUM_POINTS_TO_LOAD; configs with more threads than
     # points fail to compile for small bases.
