@@ -41,23 +41,33 @@ def evaluate_polynomials_sequential(
 
 
 def get_configs_polynomials():
-    """Return the original kernel's autotuning configuration."""
-    configs = []
-    for num_points_to_load in [128, 256, 512]:
-        for num_monomials_to_load in [8, 16, 32]:
-            for num_warps in [2, 4, 8, 16, 32]:
-                for num_stages in [2, 3, 4, 5, 6]:
-                    configs.append(
-                        triton.Config(
-                            kwargs={
-                                "NUM_POINTS_TO_LOAD": num_points_to_load,
-                                "NUM_MONOMIALS_TO_LOAD": num_monomials_to_load,
-                            },
-                            num_warps=num_warps,
-                            num_stages=num_stages,
-                        )
-                    )
-    return configs
+    """Return the configurations searched when autotuning the kernel."""
+    # (NUM_POINTS_TO_LOAD, NUM_MONOMIALS_TO_LOAD, num_warps, num_stages)
+    # Keep num_warps * 32 <= NUM_POINTS_TO_LOAD; configs with more threads than
+    # points fail to compile for small bases.
+    candidates = (
+        (128, 8, 2, 2),
+        (128, 16, 2, 2),
+        (128, 16, 4, 2),
+        (128, 32, 4, 2),
+        (256, 8, 4, 2),
+        (256, 16, 4, 2),
+        (256, 16, 8, 2),
+        (256, 32, 8, 2),
+        (512, 16, 8, 2),
+        (512, 32, 16, 2),
+    )
+    return [
+        triton.Config(
+            kwargs={
+                "NUM_POINTS_TO_LOAD": num_points,
+                "NUM_MONOMIALS_TO_LOAD": num_monomials,
+            },
+            num_warps=num_warps,
+            num_stages=num_stages,
+        )
+        for num_points, num_monomials, num_warps, num_stages in candidates
+    ]
 
 
 @triton.jit

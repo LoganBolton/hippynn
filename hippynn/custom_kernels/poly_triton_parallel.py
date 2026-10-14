@@ -46,11 +46,15 @@ def evaluate_polynomials_parallel(
 
 
 def get_configs_polynomials():
+    """Return the configurations searched when autotuning the kernel."""
+    # (NUM_POINTS_TO_LOAD, NUM_MONOMIALS_TO_LOAD, num_warps, num_stages)
+    # Keep num_warps * 32 <= NUM_POINTS_TO_LOAD; configs with more threads than
+    # points fail to compile for small bases.
     candidates = (
-        (32, 16, 4, 2),
-        (32, 32, 4, 2),
-        (64, 16, 4, 2),
-        (64, 32, 8, 2),
+        (32, 16, 1, 2),
+        (32, 32, 1, 2),
+        (64, 16, 2, 2),
+        (64, 32, 2, 2),
     )
     return [
         triton.Config(
